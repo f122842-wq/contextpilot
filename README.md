@@ -1,79 +1,120 @@
 # ContextPilot
 
-**给 AI 编程助手配一个"外部记事本"，让它在长项目里不会越聊越笨。**
+**给 AI 编程助手配一个"外部记事本"，长项目里不会越聊越笨。**
 
 ---
 
 ## 这是什么
 
-ContextPilot 是一个极简的 CLI 工具。它做了大量 AI 编程助手（Claude Code、Cursor、Codex、DeepSeek Coder）共同的痛点：
+AI 编程助手在短任务里很强，但项目一长就会：
+- 忘记之前的设计决策，重复踩坑
+- 新会话要你重新解释半天背景
+- 上下文窗口被历史对话塞满，回答质量下降
 
-> AI 很能写代码，但项目一长，它就开始忘记之前的设计决策、重复读文件、新会话要重新解释背景。
-
-ContextPilot 的思路是：**不给 AI 增加记忆，而是给它一个看得见、改得动的项目文件夹。**
-
-你把项目状态写成结构化文件，每次新会话让 AI 先读这些文件，就能无缝衔接。
-
----
-
-## 和内置 Skill / 上下文管理有什么区别
-
-很多人会问：Claude Code 已经有 skills、hooks、memory，为什么还要这个？
-
-| | Claude Code Skill / Memory | ContextPilot |
-|---|---|---|
-| **适用工具** | 只对 Claude Code 有效 | Claude Code、Cursor、Codex、DeepSeek 都能用 |
-| **存储位置** | 工具内部，黑盒管理 | `.contextpilot/` 文件夹，纯 Markdown + JSON |
-| **可读性** | 你很难直接查看和编辑 | 任何文本编辑器都能打开 |
-| **跨会话流转** | 依赖工具自身的记忆机制 | 文件在磁盘上，永远不会丢 |
-| **版本控制** | 不能 git | 可以直接 `git commit`，团队共享 |
-| **AI 透明度** | AI 被动依赖系统注入 | AI 主动读取文件，知道自己在看什么 |
-
-**一句话：Skill/Memory 是"工具替你管"，ContextPilot 是"你管，AI 配合你"。**
-
-工具内置的记忆机制会随着版本更新、配置变化而改变行为。ContextPilot 就是一堆 Markdown 文件 —— 只要文件系统还在，它就能工作。
+ContextPilot 的思路：**把项目状态写成 `.contextpilot/` 文件夹里的纯文本文件，AI 每次会话先读这些文件，就能无缝衔接。**
 
 ---
 
-## 怎么用（30 秒上手）
+## 安装
 
 ```bash
-# 1. 安装
 cd contextpilot && npm link
+```
 
-# 2. 在你的项目里初始化
+---
+
+## 两种使用场景
+
+这个工具有两类操作：
+
+| 类型 | 在哪里用 | 做什么 |
+|------|---------|--------|
+| **终端命令** | 你自己在终端跑 | 初始化项目记忆、快速存档 |
+| **AI 指令** | 粘贴给 AI / AI 自己执行 | 读取记忆、更新进度、遵守规则 |
+
+---
+
+## 一、终端命令（你对项目文件操作）
+
+### 初始化：`contextpilot init`
+
+```bash
+# 基础版 — 创建空白模板（适合新项目）
 cd ~/my-project
 contextpilot init
-# → 创建 .contextpilot/ 目录，里面有 project.md、progress.md、tasks.json 等
+
+# 聪明版 — 自动扫描项目，生成有内容的记忆（适合已开工的项目）
+contextpilot init --scan
+
+# 读 git 历史，自动填"已完成"进度
+contextpilot init --scan --from-git
+
+# 自定义上下文阈值（默认 60%）
+contextpilot init --threshold 80
+
+# 覆盖已有文件
+contextpilot init --scan --force
 ```
 
-### 日常使用就三件事：
+### 日常使用：`contextpilot snapshot`
 
-**开始干活时** — 让 AI 读项目记忆：
-> "先读 `.contextpilot/project.md` 和 `.contextpilot/progress.md`，然后开始工作。"
-
-**干活过程中** — 更新进度（手动或让 AI 帮你写）：
-> "把刚才完成的 Task CRUD 端点更新到 `.contextpilot/progress.md` 的 Completed 里。"
-
-**上下文快满 / 开新会话时** — 存档 + 恢复：
 ```bash
-contextpilot checkpoint   # 保存当前状态快照
-contextpilot resume       # 生成给新会话的提示词，粘贴给 AI
+# 一键快照 — 把当前所有项目记忆打包成一个文件
+contextpilot snapshot
+# 输出：.contextpilot/checkpoints/2026-05-16-16-30-00.md
 ```
 
-就这么简单。它就是帮你记住"项目做到哪了"、"为什么当时这么设计"、"下一步该做什么"。
+其他查看命令：
+
+```bash
+contextpilot status    # 看当前进度
+contextpilot plan      # 看下一步能做什么
+contextpilot resume    # 生成"恢复提示词"，新会话粘贴给 AI
+```
 
 ---
 
-## 五个命令
+## 二、AI 指令（在智能体中使用）
 
-| 命令 | 作用 |
-|------|------|
-| `contextpilot init` | 创建 `.contextpilot/` 目录和模板 |
-| `contextpilot status` | 看当前进度：多少任务做完了，卡在哪 |
-| `contextpilot checkpoint` | 打包当前状态→快照文件 |
-| `contextpilot resume` | 生成恢复提示词，新会话粘贴给 AI |
-| `contextpilot plan` | 看下一步能做哪些任务（自动检查依赖） |
+### 每次新会话开头 — 让 AI 读项目记忆
+
+直接粘贴这段话给 AI：
+
+> 在开始工作之前，请先阅读以下文件了解项目状态：
+> - `.contextpilot/project.md` — 项目概述和技术栈
+> - `.contextpilot/progress.md` — 当前进度
+> - `.contextpilot/decisions.md` — 设计决策
+> - `.contextpilot/tasks.json` — 任务列表
+> - `.contextpilot/checkpoints/` 中最新的快照文件
+
+或者更简单，直接用 resume 生成的提示词：
+
+```bash
+contextpilot resume
+# 把输出直接粘贴给 AI 新会话
+```
+
+### 干活过程中 — 让 AI 更新记忆
+
+随时对 AI 说：
+
+> "把刚才完成的任务更新到 `.contextpilot/progress.md` 的 Completed 里，然后把 `.contextpilot/tasks.json` 里对应任务标为 done。"
+
+> "这个设计决策很重要，记录到 `.contextpilot/decisions.md`。"
+
+### 上下文快满时 — 存档 + 开新会话
+
+当 AI 开始"变笨"时（比如 Claude 上下文用了 70% 以上），对 AI 说：
+
+> "上下文快满了，先更新 `.contextpilot/progress.md` 和 `.contextpilot/tasks.json`，然后运行 `contextpilot snapshot` 存档。我开新会话用 `contextpilot resume` 继续。"
+
+开新会话后：
+
+```bash
+contextpilot resume | pbcopy   # macOS
+contextpilot resume | clip     # Windows
+# 粘贴给新会话的 AI
+```
 
 ---
 
@@ -83,36 +124,25 @@ contextpilot resume       # 生成给新会话的提示词，粘贴给 AI
 .contextpilot/
 ├── project.md       # 项目概述、技术栈、架构
 ├── progress.md      # 当前进度：已完成 / 进行中 / 阻塞
-├── decisions.md     # 设计决策记录（为什么选 JWT 而不是 Session）
+├── decisions.md     # 设计决策记录
 ├── tasks.json       # 任务列表 + 依赖关系
-├── agents.md        # 多 Agent 配置
-├── rules.md         # 上下文预算规则（超过 60% 触发存档）
-└── checkpoints/     # 时间戳快照
+├── agents.md        # Agent 配置
+├── rules.md         # AI 行为规则（上下文预算等）
+└── checkpoints/     # 快照存档
 ```
 
-全部是纯文本 —— Markdown 和 JSON，任何工具都能读。
+全部是纯文本 — Markdown 和 JSON。可以 `git commit`，可以团队共享。
 
 ---
 
-## 为什么做这个项目
+## 和 Claude Code 内置记忆的区别
 
-AI 编程助手在短任务里表现极好，但在持续数周的项目里会"衰减"：
-- 上下文窗口被历史对话塞满，新指令被稀释
-- 每次新会话都要人工重新解释项目背景
-- 做完的决策没有沉淀，下次可能重蹈覆辙
-- 多个 Agent 的结论散落在不同会话里
+| | Claude Code Memory | ContextPilot |
+|---|---|---|
+| **适用范围** | 仅 Claude Code | Claude Code、Cursor、Codex、DeepSeek 都能用 |
+| **存储位置** | 工具内部黑盒 | `.contextpilot/` 文件夹，你完全掌控 |
+| **版本控制** | 不能 git | 可以直接 git commit |
+| **透明度** | AI 被动依赖系统注入 | AI 主动读取文件，知道自己在看什么 |
+| **跨工具** | 换工具就没了 | 文件在磁盘上，永远在 |
 
-ContextPilot 把"项目记忆"从 AI 的黑盒里拿出来，放回你手里。**工具会变，文件不会。**
-
----
-
-## 开发
-
-```bash
-npm install
-npm run dev          # tsx 热加载
-npm test             # vitest 跑测试 (52 个用例)
-npm run coverage     # 覆盖率报告 (90%+)
-npm run build        # tsup 生产构建
-npm run typecheck    # TypeScript 类型检查
-```
+**一句话：内置记忆是"工具替你管"，ContextPilot 是"你管，AI 配合你"。**

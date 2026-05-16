@@ -14,7 +14,7 @@ export function estimateUsage(
 export function isOverThreshold(
   contextText: string,
   maxTokens: number,
-  threshold = 0.6,
+  threshold: number,
 ): boolean {
   return estimateUsage(contextText, maxTokens) >= threshold;
 }
@@ -22,7 +22,7 @@ export function isOverThreshold(
 export function formatUsageReport(
   contextText: string,
   maxTokens: number,
-  threshold = 0.6,
+  threshold: number,
 ): string {
   const usage = estimateUsage(contextText, maxTokens);
   const pct = (usage * 100).toFixed(1);
@@ -36,7 +36,7 @@ export function formatUsageReport(
   if (over) {
     lines.push("");
     lines.push("⚠ WARNING: Context budget exceeded!");
-    lines.push("Consider running 'contextpilot checkpoint' to save state,");
+    lines.push("Run 'contextpilot snapshot' to save current state,");
     lines.push("then start a new session with 'contextpilot resume'.");
   }
 

@@ -5,6 +5,7 @@ import { statusCommand } from "./cli/commands/status.js";
 import { checkpointCommand } from "./cli/commands/checkpoint.js";
 import { resumeCommand } from "./cli/commands/resume.js";
 import { planCommand } from "./cli/commands/plan.js";
+import { snapshotCommand } from "./cli/commands/snapshot.js";
 
 const program = new Command();
 
@@ -18,5 +19,6 @@ program.addCommand(statusCommand);
 program.addCommand(checkpointCommand);
 program.addCommand(resumeCommand);
 program.addCommand(planCommand);
+program.addCommand(snapshotCommand);
 
 program.parse();

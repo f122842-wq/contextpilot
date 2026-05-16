@@ -28,23 +28,19 @@ describe("isOverThreshold", () => {
     // 400 chars / (10 tokens * 4) = 400 / 40 = 10.0 >> 60%
     expect(isOverThreshold("x".repeat(400), 10, 0.6)).toBe(true);
   });
-
-  it("defaults threshold to 0.6", () => {
-    expect(isOverThreshold("x".repeat(400), 10)).toBe(true);
-  });
 });
 
 describe("formatUsageReport", () => {
   it("formats usage as percentage", () => {
     // 40 chars / (100 tokens * 4) = 40/400 = 10%
-    const report = formatUsageReport("0123456789012345678901234567890123456789", 100);
+    const report = formatUsageReport("0123456789012345678901234567890123456789", 100, 0.6);
     expect(report).toContain("10.0%");
     expect(report).toContain("Context usage");
   });
 
   it("warns when over threshold", () => {
-    const report = formatUsageReport("x".repeat(400), 10);
+    const report = formatUsageReport("x".repeat(400), 10, 0.6);
     expect(report).toContain("WARNING");
-    expect(report).toContain("checkpoint");
+    expect(report).toContain("snapshot");
   });
 });
